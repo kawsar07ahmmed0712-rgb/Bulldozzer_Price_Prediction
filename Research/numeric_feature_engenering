@@ -1,0 +1,136 @@
+## Numerical Feature Engineering Notes
+
+The following notes are based on the current numerical raw feature report and are intended to guide feature engineering later.
+
+---
+
+# A. Tree-Based Model Feature Engineering Notes
+
+Use these steps when preparing numerical features for tree-based models such as Random Forest, Extra Trees, XGBoost, LightGBM, or CatBoost.
+
+## Step 1: Transform the target
+- Apply `log1p` to the target variable `SalePrice`.
+
+## Step 2: Drop pure identifier columns
+- Drop `SalesID`
+- Drop `MachineID`
+
+## Step 3: Re-evaluate ID-like coded numeric features
+These should not be treated as normal continuous numerical variables.
+- `ModelID` → treat as high-cardinality categorical-like feature
+- `auctioneerID` → treat as categorical-like feature
+- `datasource` → treat as categorical-like feature
+
+## Step 4: Clean and repair year-related information
+- Clean invalid values in `YearMade`
+- Create `machineAge = saleYear - YearMade`
+- Keep cleaned `YearMade`
+- Keep `machineAge`
+
+## Step 5: Handle `MachineHoursCurrentMeter` carefully
+- Use custom or median-based imputation
+- Add a missing flag
+- Keep the raw feature
+- Add a `log1p` version
+- Do not apply aggressive capping unless values are clearly invalid
+
+## Step 6: Handle missing values in other numeric features
+- Use median imputation as the default strategy
+- Add missing flags only where missingness may carry information
+
+## Step 7: Handle outliers selectively
+- Fix or remove only clearly invalid values
+- Keep valid extreme values unless domain review shows a problem
+
+## Step 8: Use transformations selectively
+- Do not transform every skewed feature
+- Only transform clearly problematic and important features
+- `MachineHoursCurrentMeter` is the main candidate
+
+## Step 9: Do not scale tree-based inputs
+- No standard scaling
+- No robust scaling
+- No min-max scaling
+
+## Step 10: Keep the tree pipeline simple
+- Preserve useful signal
+- Avoid unnecessary numeric beautification
+- Avoid linear-model-style preprocessing
+
+---
+
+# B. Linear Model Feature Engineering Notes
+
+Use these steps when preparing numerical features for linear models such as Linear Regression, Ridge, Lasso, or ElasticNet.
+
+## Step 1: Transform the target
+- Apply `log1p` to the target variable `SalePrice`.
+
+## Step 2: Drop pure identifier columns
+- Drop `SalesID`
+- Drop `MachineID`
+
+## Step 3: Re-evaluate ID-like coded numeric features
+These should not be used as raw continuous numerical variables.
+- `ModelID` → usually encode carefully or drop
+- `auctioneerID` → treat as categorical-like feature
+- `datasource` → treat as categorical-like feature
+
+## Step 4: Clean and repair year-related information
+- Clean invalid values in `YearMade`
+- Create `machineAge = saleYear - YearMade`
+- Review whether both `YearMade` and `machineAge` should be kept together
+
+## Step 5: Handle `MachineHoursCurrentMeter` carefully
+- Use custom or median-based imputation
+- Consider a missing flag
+- Apply `log1p`
+- Review upper-tail values for possible capping if needed
+
+## Step 6: Handle missing values in other numeric features
+- Use mean or median imputation depending on distribution
+- Prefer median if the feature is skewed or outlier-heavy
+
+## Step 7: Handle outliers more strictly
+- Review and correct invalid values
+- Consider capping or winsorization for strong upper-tail distortion
+- Linear models are sensitive to outliers, so this step is important
+
+## Step 8: Apply transformations more actively
+- Use `log1p` for highly right-skewed positive features
+- Consider `Yeo-Johnson` for skewed features with zero or negative values
+- Use stronger transformation logic than the tree-based branch
+
+## Step 9: Scale the final numerical matrix
+- Apply scaling after imputation and transformation
+- Use `StandardScaler` or `RobustScaler` depending on outlier severity
+
+## Step 10: Keep the linear pipeline coefficient-friendly
+- Reduce distortion
+- Improve symmetry where needed
+- Avoid using raw coded identifiers as continuous numeric variables
+
+---
+
+# C. Feature-Wise Quick Decision Notes
+
+| Feature | Tree-Based Model | Linear Model |
+|---|---|---|
+| `SalePrice` | Use `log1p(target)` | Use `log1p(target)` |
+| `MachineHoursCurrentMeter` | Impute + missing flag + keep raw + add `log1p` | Impute + consider missing flag + add `log1p` + review capping |
+| `SalesID` | Drop | Drop |
+| `MachineID` | Drop | Drop |
+| `ModelID` | Treat as categorical-like / high-cardinality feature | Encode carefully or drop |
+| `YearMade` | Clean + keep + create `machineAge` | Clean + keep + create `machineAge` |
+| `auctioneerID` | Treat as categorical-like | Treat as categorical-like |
+| `datasource` | Treat as categorical-like | Treat as categorical-like |
+
+---
+
+# D. Final Rule
+
+## For tree-based models
+Preserve signal, keep preprocessing simple, and avoid unnecessary scaling or blanket transformation.
+
+## For linear models
+Use stronger cleaning, stronger transformation, stricter outlier handling, and proper scaling.
